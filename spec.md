@@ -49,6 +49,27 @@ falls out of the primary key. Trade-off: App Platform's disk is ephemeral, so th
 does not survive a redeploy, and two containers would not share it. Production answer
 is managed Postgres, which is a swap inside storage.py. Stated in README.
 
+## Testing
+
+pytest with FastAPI's `TestClient`, so tests call the real routes without a server.
+Each test gets a fresh temporary database so tests never depend on each other.
+
+Tests, in the order they get written:
+
+1. `/healthz` returns 200.
+2. A valid reading returns 201 and can be read back from the device's readings.
+3. Three rejections, each asserting the status code and that the message names the field:
+   temperature out of range, timestamp in the future, missing field.
+4. Unknown device returns 404 on both GET endpoints.
+5. Stats: post three readings, check count, min, max, avg exactly.
+6. Duplicate `reading_id` returns success and the count stays at one.
+
+What these prove: every endpoint's success path and every validation rule in this spec.
+What they don't cover: concurrent writes, behaviour under load, the real deployed
+database, or the Dockerfile. Those would be the next tests to add, in that order.
+
+Tests run locally with `pytest -q` and in GitHub Actions on every push.
+
 ## File layout
 
     app/main.py        routes only, no logic
@@ -64,7 +85,7 @@ is managed Postgres, which is a swap inside storage.py. Stated in README.
 2. POST /v1/readings with validation, stored in SQLite. Duplicate reading_id is a no-op success.
 3. GET readings for a device.
 4. GET stats for a device.
-5. Tests: happy path, three validation failures, 404 for unknown device.
+5. Tests as listed in the Testing section.
 6. README.
 7. Then, in order: env-var config, request logging, batch endpoint.
 
