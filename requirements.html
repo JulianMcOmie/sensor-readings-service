@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trial Run 1: Sensor Readings Service</title>
+<style>
+  :root { --bg:#fbfaf7; --fg:#1d1d1f; --muted:#6b6b70; --line:#e2dfd8; --card:#ffffff; --accent:#0069ff; --must:#0a7d38; --should:#a15c00; --stretch:#6b3fa0; --code:#f1efe9; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#16171a; --fg:#ececee; --muted:#9a9aa2; --line:#2e3036; --card:#1e2024; --accent:#5b9dff; --must:#4cc27a; --should:#e0a04a; --stretch:#b692e8; --code:#25272c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 780px; margin: 0 auto; padding: 40px 20px 80px; }
+  h1 { font-size: 1.9rem; line-height:1.2; margin: 0 0 6px; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 1.15rem; margin: 36px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  h2 .tag { font-size:.72rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:999px; margin-left:8px; vertical-align:middle; color:#fff; }
+  .must .tag { background: var(--must); } .should .tag { background: var(--should); } .stretch .tag { background: var(--stretch); }
+  .note { color: var(--muted); font-size:.95rem; margin: 0 0 10px; }
+  ol, ul { padding-left: 1.4rem; margin: 8px 0; }
+  li { margin: 7px 0; }
+  code { background: var(--code); padding: 2px 6px; border-radius: 5px; font: .88em ui-monospace, SFMono-Regular, Menlo, monospace; }
+  pre { background: var(--code); padding: 14px 16px; border-radius: 10px; overflow-x: auto; margin: 10px 0; }
+  pre code { background: none; padding: 0; font-size: .9rem; }
+  .c { color: var(--muted); }
+  .tablewrap { overflow-x:auto; }
+  table { width:100%; border-collapse: collapse; background: var(--card); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+  th, td { text-align:left; padding: 10px 14px; border-bottom:1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  th { font-size:.8rem; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); }
+  td:first-child { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight:600; }
+  li label { display:flex; gap:10px; align-items:flex-start; cursor:pointer; }
+  li input { margin-top:6px; width:16px; height:16px; accent-color: var(--accent); flex:none; }
+  li:has(input:checked) { color: var(--muted); text-decoration: line-through; }
+  ol.check { list-style:none; padding-left:0; }
+  .num { font-weight:700; min-width: 1.7em; }
+  details { margin-top: 40px; border: 1px dashed var(--line); border-radius: 10px; padding: 12px 18px; }
+  summary { cursor: pointer; font-weight: 600; color: var(--muted); }
+  summary:hover { color: var(--fg); }
+  .brief { background: var(--card); border:1px solid var(--line); border-radius:10px; padding: 18px 22px; margin: 16px 0; }
+  .brief p { margin: 10px 0; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Trial Run 1: Sensor Readings Service</h1>
+  <p class="sub">Time limit: 3 hours. Build it, test it, deploy it to DigitalOcean App Platform.</p>
+
+  <h2>The brief</h2>
+  <div class="brief">
+    <p>We operate a fleet of field devices that report temperature. Each device sends readings to us over HTTP, one at a time, and sometimes in bursts after being offline. Devices are not perfectly reliable: they may send the same reading more than once, send garbage values when a sensor fails, or have a clock that is wrong.</p>
+    <p>We need a REST service that accepts these readings, keeps them, and lets an operator ask about a device: what has it reported, and how has it been behaving. The service must be running at a public URL on DigitalOcean by the end of the session.</p>
+    <p>A reading sent by a device looks like this:</p>
+<pre><code>{
+  "reading_id": "a1b2c3",                 <span class="c">// unique id chosen by the device</span>
+  "device_id": "device-42",
+  "timestamp": "2026-09-20T14:03:00Z",
+  "temperature_c": 21.5
+}</code></pre>
+    <p>The endpoints, the validation rules, the storage, and the scope are yours to decide. Tell us what you chose and why.</p>
+  </div>
+
+  <h2>How you will be judged</h2>
+  <ul>
+    <li>Does it work at the public URL?</li>
+    <li>Is the code organized, or is it one giant file?</li>
+    <li>Are errors clear and are status codes correct?</li>
+    <li>Do the tests actually prove something?</li>
+    <li>Does it behave like something you'd run for real: logs, settings, a health check?</li>
+    <li>Can you explain every choice, including what you skipped and why?</li>
+  </ul>
+
+  <h2>Your first 15 minutes</h2>
+  <p>Before writing code, derive your own list from the brief: nouns are resources, verbs are writes, questions the operator asks are reads. Write down validation rules by asking what a nonsense value looks like for each field. Rank everything as must, should, or nice. Put it in <code>spec.md</code>. Then open the section below and compare.</p>
+
+  <details>
+    <summary>Reveal the detailed list (only after writing your own)</summary>
+
+    <h2 class="must">Must have <span class="tag">first</span></h2>
+    <ol class="check">
+      <li><label><input type="checkbox"><span class="num">1.</span><span><code>GET /healthz</code> returns 200.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">2.</span><span><code>POST /v1/readings</code> accepts one reading and stores it. Returns 201.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">3.</span><span>Validation. Reject with a clear error message when:
+        <ul>
+          <li>any field is missing or the wrong type</li>
+          <li><code>device_id</code> is empty</li>
+          <li><code>temperature_c</code> is below -90 or above 60</li>
+          <li><code>timestamp</code> is in the future</li>
+        </ul></span></label></li>
+      <li><label><input type="checkbox"><span class="num">4.</span><span><code>GET /v1/devices/{device_id}/readings</code> returns that device's readings, newest first. Returns 404 if the device has never sent anything.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">5.</span><span><code>GET /v1/devices/{device_id}/stats</code> returns count, min, max, and average temperature for that device.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">6.</span><span>Automated tests covering the happy path and at least three validation failures.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">7.</span><span>Deployed to App Platform with a public URL and a working health check.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">8.</span><span>A README that says how to run it, how to test it, and what you would do next.</span></label></li>
+    </ol>
+
+    <h2 class="should">Should have <span class="tag">second</span></h2>
+    <ol class="check">
+      <li><label><input type="checkbox"><span class="num">9.</span><span>Sending the same <code>reading_id</code> twice must not create a duplicate. The second request should succeed without storing again.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">10.</span><span><code>POST /v1/readings/batch</code> accepts a list of up to 500 readings. Report how many were accepted and which ones were rejected and why.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">11.</span><span>Data survives a restart (a SQLite file is fine).</span></label></li>
+      <li><label><input type="checkbox"><span class="num">12.</span><span>Settings come from environment variables (for example the database path and log level), with sensible defaults.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">13.</span><span>A GitHub Actions workflow that runs the tests on every push.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">14.</span><span>Log one line per request with method, path, status code, and duration.</span></label></li>
+    </ol>
+
+    <h2 class="stretch">Stretch <span class="tag">if time remains</span></h2>
+    <ol class="check">
+      <li><label><input type="checkbox"><span class="num">15.</span><span><code>from</code> and <code>to</code> query parameters on the stats endpoint.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">16.</span><span><code>limit</code> and <code>offset</code> on the readings list.</span></label></li>
+      <li><label><input type="checkbox"><span class="num">17.</span><span>A <code>/metrics</code> endpoint with a request counter.</span></label></li>
+    </ol>
+
+    <h2>Suggested clock</h2>
+    <div class="tablewrap">
+    <table>
+      <tr><th>Time</th><th>Goal</th></tr>
+      <tr><td>0:00 – 0:15</td><td>Read the brief. Derive endpoints and rules. Write spec.md.</td></tr>
+      <tr><td>0:15 – 0:45</td><td>Hello world plus <code>/healthz</code>, deployed and green.</td></tr>
+      <tr><td>0:45 – 2:00</td><td>Must-haves 2 through 6. Push after each one.</td></tr>
+      <tr><td>2:00 – 2:40</td><td>Should-haves, in order. Stop wherever you are at 2:40.</td></tr>
+      <tr><td>2:40 – 3:00</td><td>README, final push, check the live URL, write down trade-offs.</td></tr>
+    </table>
+    </div>
+  </details>
+</main>
+</body>
+</html>
